@@ -1,0 +1,105 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  id               Int                @id @default(autoincrement())
+  username         String             @unique
+  email            String             @unique
+  password         String
+  phoneNumber      String?
+  refreshToken     String?
+  publications     Publications[]
+  role             String             @default("USER")
+  userInfo         UserInfo?
+  followers        Followers[]        @relation("Following")
+  following        Followers[]        @relation("Followed")
+  likes            PublicationLikes[]
+  replications     Replications[]
+  sentMessages     UserMessages[]     @relation("SenderRelation")
+  receivedMessages UserMessages[]     @relation("ReceiverRelation")
+}
+
+model UserInfo {
+  userId            Int      @id
+  user              Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  bio               String?
+  displayName       String?
+  profilePictureUrl String?
+  bannerUrl         String?
+}
+
+model Publications {
+  id                  Int                   @id @default(autoincrement())
+  userId              Int
+  user                Users                 @relation(fields: [userId], references: [id])
+  message             String
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  parentPublicationId Int? // Field for self-relation
+  parentPublication   Publications?         @relation("ChildToParent", fields: [parentPublicationId], references: [id], onDelete: Cascade)
+  childPublications   Publications[]        @relation("ChildToParent") // Back-reference for children
+  images              PublicationImages[]
+  likes               PublicationLikes[]
+  replications        Replications[]
+}
+
+model Followers {
+  followingId  Int
+  followedById Int
+  following    Users @relation("Followed", fields: [followingId], references: [id], onDelete: Cascade)
+  followedBy   Users @relation("Following", fields: [followedById], references: [id], onDelete: Cascade)
+
+  @@id([followingId, followedById])
+}
+
+model Replications {
+  publicationId Int
+  userId        Int
+  text          String?
+  createdAt     DateTime     @default(now())
+  publication   Publications @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  user          Users        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([publicationId, userId])
+}
+
+model PublicationLikes {
+  publicationId Int
+  userId        Int
+  createdAt     DateTime     @default(now())
+  publication   Publications @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  user          Users        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([publicationId, userId])
+}
+
+model PublicationImages {
+  imageId       Int          @id @default(autoincrement())
+  publicationId Int
+  imageUrl      String
+  publication   Publications @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+}
+
+model UserMessages {
+  messageId  Int      @id @default(autoincrement())
+  senderId   Int
+  receiverId Int
+  content    String
+  createdAt  DateTime @default(now())
+  sender     Users    @relation("SenderRelation", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   Users    @relation("ReceiverRelation", fields: [receiverId], references: [id], onDelete: Cascade)
+}
