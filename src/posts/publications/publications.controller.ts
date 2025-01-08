@@ -12,15 +12,15 @@ import {
 import { PublicationsService } from './publications.service';
 import { CreatePublicationDto } from './dto/create-publication.dto';
 import { Public } from 'src/core/auth/decorators/public.decorator';
-import { PublicationsInterceptor } from './interceptors/publications.interceptor';
 import { Request } from 'src/core/auth/entities/request.entity';
+import { RequestToBodyInterceptor } from 'src/common/interceptors/request-to-body.interceptor';
 
 @Controller('publications')
 export class PublicationsController {
   constructor(private readonly publicationsService: PublicationsService) {}
 
-  @UseInterceptors(PublicationsInterceptor)
   @Post()
+  @UseInterceptors(new RequestToBodyInterceptor('user.sub', 'userId')) // Not the best way to do it, just learning how to use interceptors
   create(@Body() createPublicationDto: CreatePublicationDto) {
     return this.publicationsService.create(createPublicationDto);
   }
