@@ -4,6 +4,8 @@ import { CoreModule } from './core/core.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PostsModule } from './posts/posts.module';
 import { SocialModule } from './social/social.module';
+import { ChatGateway } from './chat/chat.gateway';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -12,8 +14,9 @@ import { SocialModule } from './social/social.module';
     SocialModule,
     PrismaModule,
     ConfigModule.forRoot({ isGlobal: true }),
+    ChatModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [ChatGateway],
 })
 export class AppModule {}
