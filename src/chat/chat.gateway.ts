@@ -22,6 +22,8 @@ export class ChatGateway
 {
   constructor(private jwtService: JwtService) {}
 
+  private userSocketMap = new Map<number, string>(); // userId->socketId
+
   @WebSocketServer()
   private server: Server;
 
@@ -30,15 +32,30 @@ export class ChatGateway
   }
 
   handleConnection(client: Socket) {
+    this.userSocketMap.set(client['user']['sub'], client.id);
     console.log(`Client connected: ${client.id}`);
   }
 
   handleDisconnect(client: Socket) {
+    this.userSocketMap.delete(client['user']['sub']);
     console.log(`Client disconnected: ${client.id}`);
   }
 
   @SubscribeMessage('message')
-  handleEvent(@ConnectedSocket() client: Socket, @MessageBody() data: string) {
-    client.broadcast.emit('messageServer', data);
+  handleEvent(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { receiverId: number; message: string }
+  ) {
+    this.sendMessageToUser(data?.receiverId, data?.message);
+  }
+
+  sendMessageToUser(receiverId: number, message: string) {
+    const socketId = this.userSocketMap.get(receiverId);
+
+    if (socketId) {
+      this.server.to(socketId).emit('messageToUser', message);
+    } else {
+      console.log(`User with id ${receiverId} not connected!`);
+    }
   }
 }
