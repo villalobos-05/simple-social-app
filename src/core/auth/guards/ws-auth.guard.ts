@@ -2,6 +2,7 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { WsException } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
+import { extractTokenFromHeader } from '../utils/extractToken';
 
 @Injectable()
 export class WsAuthGuard implements CanActivate {
@@ -10,7 +11,7 @@ export class WsAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const client = context.switchToWs().getClient() as Socket;
 
-    const token = this.extractTokenFromHeader(
+    const token = extractTokenFromHeader(
       client.handshake.headers['authorization']
     );
 
@@ -27,10 +28,5 @@ export class WsAuthGuard implements CanActivate {
     }
 
     return true;
-  }
-
-  extractTokenFromHeader(authHeader: string) {
-    const [type, token] = authHeader?.split(' ') ?? [];
-    return type === 'Bearer' ? token : undefined;
   }
 }

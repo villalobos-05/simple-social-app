@@ -1,6 +1,7 @@
 import { JwtService } from '@nestjs/jwt';
 import { Socket } from 'socket.io';
 import { JwtPayload } from '../entities/payload.entity';
+import { extractTokenFromHeader } from '../utils/extractToken';
 
 export interface AuthSocket extends Socket {
   user: JwtPayload;
@@ -39,8 +40,3 @@ export const WSAuthMiddleware = (jwtService: JwtService): SocketMiddleware => {
     }
   };
 };
-
-function extractTokenFromHeader(authHeader: string) {
-  const [type, token] = authHeader?.split(' ') ?? [];
-  return type === 'Bearer' ? token : undefined;
-}
