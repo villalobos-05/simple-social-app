@@ -1,4 +1,9 @@
-import { UseGuards } from '@nestjs/common';
+import {
+  UseFilters,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
@@ -14,13 +19,22 @@ import {
 import { Server, Socket } from 'socket.io';
 import { WsAuthGuard } from 'src/core/auth/guards/ws-auth.guard';
 import { WSAuthMiddleware } from 'src/core/auth/middleware/ws-auth.middleware';
+import { ChatService } from './chat.service';
+import { CreateMessageDto } from './dto/create-message.dto';
+import { SendMessageDto } from './dto/send-message.dto';
+import { WsBadRequestFilter } from 'src/common/filters/ws-bad-request-exception.filter';
 
 @UseGuards(WsAuthGuard)
+@UsePipes(new ValidationPipe({ whitelist: true }))
+@UseFilters(WsBadRequestFilter)
 @WebSocketGateway({ namespace: 'chat' })
 export class ChatGateway
   implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit
 {
-  constructor(private jwtService: JwtService) {}
+  constructor(
+    private jwtService: JwtService,
+    private chatService: ChatService
+  ) {}
 
   private userSocketMap = new Map<number, string>(); // userId->socketId
 
@@ -42,20 +56,25 @@ export class ChatGateway
   }
 
   @SubscribeMessage('message')
-  handleEvent(
+  async handleEvent(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { receiverId: number; message: string }
+    @MessageBody() sendMessageDto: SendMessageDto
   ) {
-    this.sendMessageToUser(data?.receiverId, data?.message);
+    await this.sendMessageToUser({
+      senderId: client['user']['sub'],
+      ...sendMessageDto,
+    });
   }
 
-  sendMessageToUser(receiverId: number, message: string) {
-    const socketId = this.userSocketMap.get(receiverId);
+  async sendMessageToUser(createMessageDto: CreateMessageDto) {
+    await this.chatService.createMessage(createMessageDto);
+
+    const socketId = this.userSocketMap.get(createMessageDto.receiverId);
 
     if (socketId) {
-      this.server.to(socketId).emit('messageToUser', message);
+      this.server.to(socketId).emit('messageToUser', createMessageDto.content);
     } else {
-      console.log(`User with id ${receiverId} not connected!`);
+      console.log(`User with id ${createMessageDto.receiverId} not connected!`);
     }
   }
 }
