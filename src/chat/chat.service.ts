@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
-import { FindMessageDto } from './dto/find-message.dto';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -22,24 +21,32 @@ export class ChatService {
     }
   }
 
-  async findMessages(findMessageDto: FindMessageDto) {
-    await this.prismaService.userMessages.findMany({
-      where: findMessageDto,
-    });
-  }
-
   async findConversation(userId1: number, userId2: number) {
-    const messagesUser1 = await this.findMessages({
-      senderId: userId1,
-      receiverId: userId2,
+    const messages = await this.prismaService.userMessages.findMany({
+      where: {
+        OR: [
+          {
+            senderId: userId1,
+            receiverId: userId2,
+          },
+          {
+            senderId: userId2,
+            receiverId: userId1,
+          },
+        ],
+      },
+      select: {
+        messageId: true,
+        senderId: true,
+        content: true,
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
     });
 
-    const messagesUser2 = await this.findMessages({
-      senderId: userId2,
-      receiverId: userId1,
-    });
-
-    console.log(messagesUser1, messagesUser2);
+    return messages;
   }
 
   handlePrismaError(error: Prisma.PrismaClientKnownRequestError) {
