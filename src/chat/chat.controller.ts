@@ -11,6 +11,9 @@ export class ChatController {
     @Req() request: Request,
     @Param('id', ParseIntPipe) receiverId: number
   ) {
-    return await this.chatService.findConversation(request.user.sub, receiverId);
+    return await this.chatService.findConversation(
+      request.user.sub,
+      receiverId
+    );
   }
 }
